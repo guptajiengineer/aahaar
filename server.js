@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -78,13 +79,22 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route ${req.originalUrl} not found`,
+// Serve frontend static files in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'frontend/dist')));
+
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, 'frontend', 'dist', 'index.html'));
   });
-});
+} else {
+  // 404 handler for development (API routes)
+  app.use((req, res) => {
+    res.status(404).json({
+      success: false,
+      message: `Route ${req.originalUrl} not found`,
+    });
+  });
+}
 
 // Central error handler (must be last)
 app.use(errorHandler);
