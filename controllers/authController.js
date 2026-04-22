@@ -20,12 +20,7 @@ const register = asyncHandler(async (req, res) => {
     throw new Error('An account with this email already exists');
   }
 
-  // Generate OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-  // For local testing: log the OTP since Nodemailer uses placeholders
-  console.log(`\n📧 [DEV] Verification OTP for ${email}: ${otp}\n`);
+  // Skip OTP generation entirely as per user request
 
   const user = await User.create({
     name,
@@ -35,8 +30,7 @@ const register = asyncHandler(async (req, res) => {
     role,
     city,
     address,
-    emailVerificationToken: otp,
-    emailVerificationExpires: otpExpires,
+    isVerified: true,
   });
 
   // Create role-specific profile
@@ -48,18 +42,8 @@ const register = asyncHandler(async (req, res) => {
     await VolunteerProfile.create({ userId: user._id });
   }
 
-  // Send verification email (don't block response on failure)
-  try {
-    await sendVerificationEmail(email, name, otp);
-  } catch (emailErr) {
-    console.error('Email sending failed:', emailErr.message);
-  }
-
-  res.status(201).json({
-    success: true,
-    message: 'Account created! Please check your email for the verification code.',
-    userId: user._id,
-  });
+  // Immediately return token response and log the user in
+  sendTokenResponse(user, 201, res);
 });
 
 // @desc    Verify email with OTP

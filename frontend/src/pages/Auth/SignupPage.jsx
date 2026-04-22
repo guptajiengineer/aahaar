@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import * as authService from '../../services/authService';
 import { ToastContainer } from '../../components/common/Toast';
 
@@ -16,6 +17,7 @@ export default function SignupPage() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', city: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { setUser } = useAuth();
   const navigate = useNavigate();
 
   const handleRoleSelect = (r) => {
@@ -35,7 +37,16 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const { data } = await authService.register({ ...form, role });
-      navigate('/verify-email', { state: { userId: data.userId } });
+      
+      // Auto-login the user since email verification is disabled
+      localStorage.setItem('accessToken', data.accessToken);
+      setUser(data.user);
+
+      if (!data.user.isApproved) {
+        navigate('/pending-approval');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
