@@ -49,9 +49,7 @@ const userSchema = new mongoose.Schema(
     // donors and ngos need admin approval before going live
     isApproved: {
       type: Boolean,
-      default: function () {
-        return this.role === 'volunteer' || this.role === 'admin';
-      },
+      default: true,
     },
     isSuspended: {
       type: Boolean,

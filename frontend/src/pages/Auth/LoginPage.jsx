@@ -22,10 +22,6 @@ export default function LoginPage() {
         navigate('/verify-email', { state: { userId: user._id } });
         return;
       }
-      if (!user.isApproved) {
-        navigate('/pending-approval');
-        return;
-      }
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong');

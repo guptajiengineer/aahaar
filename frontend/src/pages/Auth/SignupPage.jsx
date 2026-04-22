@@ -42,11 +42,7 @@ export default function SignupPage() {
       localStorage.setItem('accessToken', data.accessToken);
       setUser(data.user);
 
-      if (!data.user.isApproved) {
-        navigate('/pending-approval');
-      } else {
-        navigate('/dashboard');
-      }
+      navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
