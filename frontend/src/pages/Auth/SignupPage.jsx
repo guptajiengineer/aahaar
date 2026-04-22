@@ -5,8 +5,8 @@ import * as authService from '../../services/authService';
 import { ToastContainer } from '../../components/common/Toast';
 
 const ROLES = [
-  { value: 'donor',     label: 'Donor',     emoji: '🍱', desc: 'Restaurant, hotel, household, or event with surplus food' },
-  { value: 'ngo',       label: 'NGO',       emoji: '🤝', desc: 'Organisation that collects and distributes food' },
+  { value: 'donor', label: 'Donor', emoji: '🍱', desc: 'Restaurant, hotel, household, or event with surplus food' },
+  { value: 'ngo', label: 'NGO', emoji: '🤝', desc: 'Organisation that collects and distributes food' },
   { value: 'volunteer', label: 'Volunteer', emoji: '🚴', desc: 'Individual who picks up and delivers food' },
 ];
 
@@ -37,7 +37,7 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const { data } = await authService.register({ ...form, role });
-      
+
       // Auto-login the user since email verification is disabled
       localStorage.setItem('accessToken', data.accessToken);
       setUser(data.user);
