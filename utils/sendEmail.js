@@ -1,5 +1,11 @@
 const nodemailer = require('nodemailer');
 
+const isEmailConfigured = () =>
+  process.env.EMAIL_USER &&
+  process.env.EMAIL_USER !== 'placeholder@email.com' &&
+  process.env.EMAIL_PASS &&
+  process.env.EMAIL_PASS !== 'placeholder';
+
 const createTransporter = () => {
   return nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
@@ -16,6 +22,10 @@ const createTransporter = () => {
  * Send a verification email with a 6-digit OTP.
  */
 const sendVerificationEmail = async (to, name, otp) => {
+  if (!isEmailConfigured()) {
+    console.warn('[Email] SMTP not configured. Skipping verification email to:', to);
+    return;
+  }
   const transporter = createTransporter();
 
   const html = `
@@ -45,6 +55,10 @@ const sendVerificationEmail = async (to, name, otp) => {
  * Send approval/rejection notification email.
  */
 const sendApprovalEmail = async (to, name, approved, reason = '') => {
+  if (!isEmailConfigured()) {
+    console.warn('[Email] SMTP not configured. Skipping approval email to:', to);
+    return;
+  }
   const transporter = createTransporter();
 
   const subject = approved
@@ -76,6 +90,10 @@ const sendApprovalEmail = async (to, name, approved, reason = '') => {
  * Send password reset email.
  */
 const sendPasswordResetEmail = async (to, name, resetUrl) => {
+  if (!isEmailConfigured()) {
+    console.warn('[Email] SMTP not configured. Skipping password reset email to:', to);
+    return;
+  }
   const transporter = createTransporter();
 
   const html = `

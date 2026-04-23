@@ -6,4 +6,11 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const isCloudinaryConfigured =
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_CLOUD_NAME !== 'placeholder' &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_KEY !== 'placeholder';
+
 module.exports = cloudinary;
+module.exports.isCloudinaryConfigured = isCloudinaryConfigured;

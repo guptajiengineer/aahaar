@@ -2,6 +2,8 @@ const asyncHandler = require('express-async-handler');
 const Listing = require('../models/Listing');
 const Task = require('../models/Task');
 const NGOProfile = require('../models/NGOProfile');
+const VolunteerProfile = require('../models/VolunteerProfile');
+const User = require('../models/User');
 const DistributionLog = require('../models/DistributionLog');
 const { createNotification } = require('../utils/createNotification');
 
@@ -217,6 +219,84 @@ const getNGOStats = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Search all approved volunteers (for NGO to recruit)
+// @route   GET /api/ngo/volunteers/search?q=name
+// @access  Private (ngo)
+const searchVolunteers = asyncHandler(async (req, res) => {
+  const { q } = req.query;
+
+  const query = { role: 'volunteer', isApproved: true, isSuspended: false };
+  if (q && q.trim()) {
+    query.$or = [
+      { name: { $regex: q.trim(), $options: 'i' } },
+      { city: { $regex: q.trim(), $options: 'i' } },
+    ];
+  }
+
+  const volunteers = await User.find(query).select('name email city profilePhoto').limit(20);
+  res.json({ success: true, volunteers });
+});
+
+// @desc    Add a volunteer to this NGO's team
+// @route   POST /api/ngo/volunteers/add
+// @access  Private (ngo)
+const addVolunteerToNGO = asyncHandler(async (req, res) => {
+  const { volunteerId } = req.body;
+
+  const volunteer = await User.findOne({
+    _id: volunteerId,
+    role: 'volunteer',
+    isApproved: true,
+    isSuspended: false,
+  });
+
+  if (!volunteer) {
+    res.status(404);
+    throw new Error('Volunteer not found or not approved');
+  }
+
+  // Add to NGO's assignedVolunteers (avoid duplicates with $addToSet)
+  await NGOProfile.findOneAndUpdate(
+    { userId: req.user._id },
+    { $addToSet: { assignedVolunteers: volunteerId } }
+  );
+
+  // Set volunteer's linkedNGO
+  await VolunteerProfile.findOneAndUpdate(
+    { userId: volunteerId },
+    { linkedNGO: req.user._id }
+  );
+
+  // Notify the volunteer
+  await createNotification(
+    volunteerId,
+    `You have been added to ${req.user.name}'s team on Aahaar. You will now receive pickup tasks from them.`,
+    'general'
+  );
+
+  res.json({ success: true, message: 'Volunteer added to your team' });
+});
+
+// @desc    Remove a volunteer from this NGO's team
+// @route   DELETE /api/ngo/volunteers/:volunteerId
+// @access  Private (ngo)
+const removeVolunteerFromNGO = asyncHandler(async (req, res) => {
+  const { volunteerId } = req.params;
+
+  await NGOProfile.findOneAndUpdate(
+    { userId: req.user._id },
+    { $pull: { assignedVolunteers: volunteerId } }
+  );
+
+  // Only clear linkedNGO if they were linked to THIS ngo
+  await VolunteerProfile.findOneAndUpdate(
+    { userId: volunteerId, linkedNGO: req.user._id },
+    { linkedNGO: null }
+  );
+
+  res.json({ success: true, message: 'Volunteer removed from your team' });
+});
+
 module.exports = {
   getNearbyListings,
   claimListing,
@@ -225,4 +305,7 @@ module.exports = {
   getLinkedVolunteers,
   logDistribution,
   getNGOStats,
+  searchVolunteers,
+  addVolunteerToNGO,
+  removeVolunteerFromNGO,
 };

@@ -8,3 +8,9 @@ export const getMyCollections = (tab) => api.get('/ngo/collections', { params: {
 export const getLinkedVolunteers = () => api.get('/ngo/volunteers');
 export const logDistribution = (data) => api.post('/ngo/distribution-log', data);
 export const getNGOStats = () => api.get('/ngo/stats');
+
+// Volunteer management
+export const searchVolunteers = (q) => api.get('/ngo/volunteers/search', { params: { q } });
+export const addVolunteer = (volunteerId) => api.post('/ngo/volunteers/add', { volunteerId });
+export const removeVolunteer = (volunteerId) => api.delete(`/ngo/volunteers/${volunteerId}`);
+

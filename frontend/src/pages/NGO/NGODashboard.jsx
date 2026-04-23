@@ -328,28 +328,152 @@ function DistributionLogForm() {
 }
 
 function VolunteerList() {
-  const [volunteers, setVolunteers] = useState([]);
-  useEffect(() => { ngoService.getLinkedVolunteers().then(({ data }) => setVolunteers(data.volunteers)); }, []);
+  const [linked, setLinked] = useState([]);
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [adding, setAdding] = useState(null);
+  const [removing, setRemoving] = useState(null);
+  const [searched, setSearched] = useState(false);
+
+  const loadLinked = () => {
+    ngoService.getLinkedVolunteers().then(({ data }) => setLinked(data.volunteers || []));
+  };
+
+  useEffect(() => { loadLinked(); }, []);
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    setSearching(true);
+    setSearched(true);
+    try {
+      const { data } = await ngoService.searchVolunteers(search);
+      setResults(data.volunteers);
+    } catch {
+      showToast('Search failed', 'error');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleAdd = async (id) => {
+    setAdding(id);
+    try {
+      await ngoService.addVolunteer(id);
+      showToast('Volunteer added to your team!', 'success');
+      loadLinked();
+      setResults((prev) => prev.filter((v) => v._id !== id));
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to add volunteer', 'error');
+    } finally {
+      setAdding(null);
+    }
+  };
+
+  const handleRemove = async (id, name) => {
+    if (!window.confirm(`Remove ${name} from your team?`)) return;
+    setRemoving(id);
+    try {
+      await ngoService.removeVolunteer(id);
+      showToast('Volunteer removed', 'success');
+      loadLinked();
+    } catch {
+      showToast('Failed to remove volunteer', 'error');
+    } finally {
+      setRemoving(null);
+    }
+  };
+
+  const linkedIds = new Set(linked.map((v) => v._id));
+  const filteredResults = results.filter((v) => !linkedIds.has(v._id));
+
   return (
     <div>
       <div className="page-header">
         <h1 className="page-title">Volunteers</h1>
-        <p className="page-subtitle">Volunteers linked to your organisation.</p>
+        <p className="page-subtitle">Build your team. Search for approved volunteers and add them.</p>
       </div>
-      {volunteers.length === 0 ? (
-        <div className="empty-state"><div className="empty-state-icon">🚴</div><p className="empty-state-title">No linked volunteers yet</p></div>
+
+      {/* Search */}
+      <form onSubmit={handleSearch} className="flex gap-3" style={{ marginBottom: 'var(--space-6)' }}>
+        <input
+          className="form-input"
+          placeholder="Search by name or city…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ flex: 1 }}
+        />
+        <button type="submit" className="btn btn-primary" disabled={searching}>
+          {searching ? <span className="spinner" style={{ width: 16, height: 16 }} /> : '🔍 Search'}
+        </button>
+      </form>
+
+      {/* Search results */}
+      {searched && (
+        <>
+          {filteredResults.length === 0 && !searching && (
+            <div className="alert" style={{ marginBottom: 'var(--space-6)', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+              No new volunteers found{search ? ` for "${search}"` : ''}.
+            </div>
+          )}
+          {filteredResults.length > 0 && (
+            <div style={{ marginBottom: 'var(--space-8)' }}>
+              <h2 className="section-title" style={{ marginBottom: 'var(--space-4)' }}>
+                Search results ({filteredResults.length})
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                {filteredResults.map((v) => (
+                  <div key={v._id} className="card-flat flex items-center gap-4">
+                    <div className="avatar"><span>{v.name[0].toUpperCase()}</span></div>
+                    <div style={{ flex: 1 }}>
+                      <p className="font-semi">{v.name}</p>
+                      <p className="text-sm text-muted">{v.city} · {v.email}</p>
+                    </div>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => handleAdd(v._id)}
+                      disabled={adding === v._id}
+                    >
+                      {adding === v._id ? <span className="spinner" style={{ width: 14, height: 14 }} /> : '+ Add'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Team */}
+      <h2 className="section-title" style={{ marginBottom: 'var(--space-4)' }}>
+        Your team ({linked.length})
+      </h2>
+      {linked.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">🚴</div>
+          <p className="empty-state-title">No volunteers yet</p>
+          <p className="text-muted text-sm">Use the search above to find and add approved volunteers.</p>
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-          {volunteers.map((v) => (
+          {linked.map((v) => (
             <div key={v._id} className="card-flat flex items-center gap-4">
               <div className="avatar"><span>{v.name[0].toUpperCase()}</span></div>
-              <div>
+              <div style={{ flex: 1 }}>
                 <p className="font-semi">{v.name}</p>
                 <p className="text-sm text-muted">{v.city} · {v.email}</p>
               </div>
-              <span className={`badge ${v.isVerified ? 'badge-approved' : 'badge-pending'}`} style={{ marginLeft: 'auto' }}>
+              <span className={`badge ${v.isVerified ? 'badge-approved' : 'badge-pending'}`} style={{ marginRight: 'var(--space-2)' }}>
                 {v.isVerified ? 'Verified' : 'Unverified'}
               </span>
+              <button
+                className="btn btn-sm"
+                style={{ background: 'rgba(220,38,38,0.08)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.2)' }}
+                onClick={() => handleRemove(v._id, v.name)}
+                disabled={removing === v._id}
+              >
+                {removing === v._id ? <span className="spinner" style={{ width: 14, height: 14 }} /> : 'Remove'}
+              </button>
             </div>
           ))}
         </div>

@@ -46,10 +46,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    // donors and ngos need admin approval before going live
+    // all new users require admin approval before going live
     isApproved: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     isSuspended: {
       type: Boolean,

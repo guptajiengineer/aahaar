@@ -105,22 +105,23 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-// Auto-create admin account to bypass local DNS block
+// Auto-create admin account on first boot
 const createAdmin = async () => {
   try {
     const User = require('./models/User');
     const adminExists = await User.findOne({ email: 'admin@aahaar.com' });
     if (!adminExists) {
+      const adminPassword = process.env.ADMIN_PASSWORD || 'AahaarAdmin@2024';
       await User.create({
         name: 'System Admin',
         email: 'admin@aahaar.com',
-        password: 'password123',
+        password: adminPassword,
         role: 'admin',
         city: 'Global',
         isVerified: true,
         isApproved: true,
       });
-      console.log('✅ Auto-created Admin account: admin@aahaar.com / password123');
+      console.log('✅ Auto-created Admin account: admin@aahaar.com');
     }
   } catch (error) {
     console.error('Failed to auto-create admin:', error.message);

@@ -8,6 +8,8 @@ import LoginPage from './pages/Auth/LoginPage';
 import SignupPage from './pages/Auth/SignupPage';
 import VerifyEmailPage from './pages/Auth/VerifyEmailPage';
 import PendingApprovalPage from './pages/Auth/PendingApprovalPage';
+import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/Auth/ResetPasswordPage';
 
 import DonorDashboard from './pages/Donor/DonorDashboard';
 import NGODashboard from './pages/NGO/NGODashboard';
@@ -36,6 +38,8 @@ function RoleRouter() {
       <Route path="/signup" element={!user ? <SignupPage /> : <Navigate to="/dashboard" replace />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/pending-approval" element={<PendingApprovalPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
       {/* Dashboard redirect */}
       <Route

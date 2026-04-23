@@ -1,81 +1,92 @@
-import { useCallback, useState } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
+import { useMemo } from 'react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
-const containerStyle = {
-  width: '100%',
-  height: '400px',
-  borderRadius: 'var(--radius-lg)'
-};
-
-export default function MapComponent({ center, markers = [], onMarkerClick }) {
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
+// Use DivIcons to avoid the Vite/Leaflet default-icon asset issue
+const makeCircleIcon = (color, size = 18) =>
+  L.divIcon({
+    className: '',
+    html: `<div style="
+      width:${size}px;height:${size}px;
+      background:${color};
+      border:3px solid white;
+      border-radius:50%;
+      box-shadow:0 2px 6px rgba(0,0,0,0.35);
+    "></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -(size / 2 + 6)],
   });
 
-  const [map, setMap] = useState(null);
-  const [activeMarker, setActiveMarker] = useState(null);
+const myLocationIcon = makeCircleIcon('#3D6B4F', 20);  // primary green
+const listingIcon    = makeCircleIcon('#E8943A', 16);  // accent orange
 
-  const onLoad = useCallback(function callback(map) {
-    setMap(map);
-  }, []);
+const containerStyle = { width: '100%', height: '400px' };
 
-  const onUnmount = useCallback(function callback(map) {
-    setMap(null);
-  }, []);
+export default function MapComponent({ center, markers = [], onMarkerClick }) {
+  // center = { lat, lng }
+  const position = useMemo(() => [center.lat, center.lng], [center.lat, center.lng]);
 
-  if (!isLoaded) return <div className="skeleton" style={{ width: '100%', height: 400, borderRadius: 'var(--radius-lg)' }} />;
+  if (!center?.lat || !center?.lng) {
+    return (
+      <div
+        style={{
+          ...containerStyle,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--surface)',
+          borderRadius: 'var(--radius-lg)',
+          color: 'var(--text-muted)',
+        }}
+      >
+        <p className="text-sm">Waiting for location…</p>
+      </div>
+    );
+  }
 
   return (
-    <GoogleMap
-      mapContainerStyle={containerStyle}
-      center={center}
-      zoom={12}
-      onLoad={onLoad}
-      onUnmount={onUnmount}
-      options={{
-        disableDefaultUI: true,
-        zoomControl: true,
-        styles: [
-          { featureType: 'poi', stylers: [{ visibility: 'off' }] }
-        ]
-      }}
+    <MapContainer
+      center={position}
+      zoom={13}
+      style={containerStyle}
+      scrollWheelZoom={false}
     >
-      {/* Current location marker */}
-      <Marker
-        position={center}
-        icon={{
-          url: 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%233D6B4F"%3E%3Cpath d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/%3E%3C/svg%3E',
-          scaledSize: new window.google.maps.Size(36, 36),
-          anchor: new window.google.maps.Point(18, 36)
-        }}
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
+      {/* Current location marker */}
+      <Marker position={position} icon={myLocationIcon}>
+        <Popup>
+          <strong>Your location</strong>
+        </Popup>
+      </Marker>
+
       {/* Listing markers */}
-      {markers.map((m) => (
-        <Marker
-          key={m._id}
-          position={{ lat: m.location.coordinates[1], lng: m.location.coordinates[0] }}
-          onClick={() => {
-            setActiveMarker(m);
-            if (onMarkerClick) onMarkerClick(m);
-          }}
-          icon={{
-            url: 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%23E8943A"%3E%3Cpath d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/%3E%3C/svg%3E',
-            scaledSize: new window.google.maps.Size(32, 32),
-            anchor: new window.google.maps.Point(16, 32)
-          }}
-        >
-          {activeMarker?._id === m._id && (
-            <InfoWindow onCloseClick={() => setActiveMarker(null)}>
-              <div style={{ color: 'var(--text)' }}>
-                <p style={{ fontWeight: 600, margin: '0 0 4px 0' }}>{m.foodName}</p>
-                <p style={{ fontSize: '12px', margin: 0 }}>{m.quantity} {m.unit}</p>
-              </div>
-            </InfoWindow>
-          )}
-        </Marker>
-      ))}
-    </GoogleMap>
+      {markers.map((m) => {
+        const [lng, lat] = m.location?.coordinates || [];
+        if (lat == null || lng == null) return null;
+        return (
+          <Marker
+            key={m._id}
+            position={[lat, lng]}
+            icon={listingIcon}
+            eventHandlers={{
+              click: () => onMarkerClick && onMarkerClick(m),
+            }}
+          >
+            <Popup>
+              <strong style={{ display: 'block', marginBottom: 4 }}>{m.foodName}</strong>
+              <span style={{ fontSize: 12, color: '#555' }}>
+                {m.quantity} {m.unit}
+              </span>
+            </Popup>
+          </Marker>
+        );
+      })}
+    </MapContainer>
   );
 }

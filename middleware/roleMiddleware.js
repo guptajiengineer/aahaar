@@ -16,9 +16,9 @@ const authorise = (...roles) => {
       );
     }
 
-    // Donors and NGOs must be approved before accessing protected features
+    // All non-admin roles must be approved before accessing protected features
     if (
-      (req.user.role === 'donor' || req.user.role === 'ngo') &&
+      req.user.role !== 'admin' &&
       !req.user.isApproved
     ) {
       res.status(403);

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { showToast } from '../../components/common/Toast';
 import { ToastContainer } from '../../components/common/Toast';
@@ -11,6 +11,8 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const resetMsg = location.state?.message || '';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,6 +22,10 @@ export default function LoginPage() {
       const user = await login(email, password);
       if (!user.isVerified) {
         navigate('/verify-email', { state: { userId: user._id } });
+        return;
+      }
+      if (!user.isApproved) {
+        navigate('/pending-approval');
         return;
       }
       navigate('/dashboard');
@@ -52,6 +58,12 @@ export default function LoginPage() {
         <p className="text-muted text-sm" style={{ marginBottom: 'var(--space-8)' }}>
           Log in to continue making an impact.
         </p>
+
+        {resetMsg && (
+          <div className="alert alert-success" style={{ marginBottom: 'var(--space-5)' }}>
+            {resetMsg}
+          </div>
+        )}
 
         {error && (
           <div className="alert alert-error" style={{ marginBottom: 'var(--space-5)' }}>

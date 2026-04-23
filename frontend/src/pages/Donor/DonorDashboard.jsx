@@ -111,6 +111,7 @@ function PostDonation({ onSuccess }) {
   const [photo, setPhoto] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
@@ -138,14 +139,32 @@ function PostDonation({ onSuccess }) {
     if (photo) fd.append('photo', photo);
     try {
       await donorService.createListing(fd);
-      showToast('Donation posted! 🎉', 'success');
-      navigate('/donor/listings');
+      setSuccess(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to post donation');
     } finally {
       setLoading(false);
     }
   };
+
+  if (success) {
+    return (
+      <div style={{ maxWidth: 600 }}>
+        <div className="empty-state" style={{ paddingTop: 'var(--space-12)' }}>
+          <div className="empty-state-icon">✅</div>
+          <p className="empty-state-title">Listing submitted for review!</p>
+          <p className="text-muted text-sm" style={{ marginBottom: 'var(--space-6)', maxWidth: 360, margin: '0 auto var(--space-6)' }}>
+            Your donation is in the admin review queue. Once approved it will be visible to NGOs nearby.
+            You'll be notified when it goes live — usually within a few hours.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <NavLink to="/donor/listings" className="btn btn-primary">View my listings</NavLink>
+            <button className="btn btn-ghost" onClick={() => setSuccess(false)}>Post another</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 600 }}>
@@ -290,7 +309,7 @@ function MyListings() {
                 <div style={{ flex: 1 }}>
                   <div className="flex items-center gap-3" style={{ marginBottom: 'var(--space-2)' }}>
                     <p className="font-semi text-lg">{l.foodName}</p>
-                    <StatusBadge status={l.status} />
+                    <StatusBadge status={!l.isApproved && l.status === 'active' ? 'pending-approval' : l.status} />
                     <StatusBadge status={l.foodType} />
                   </div>
                   <p className="text-sm text-muted">{l.quantity} {l.unit} · {l.address}</p>
