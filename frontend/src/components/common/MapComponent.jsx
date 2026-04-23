@@ -20,7 +20,7 @@ const makeCircleIcon = (color, size = 18) =>
   });
 
 const myLocationIcon = makeCircleIcon('#3D6B4F', 20);  // primary green
-const listingIcon    = makeCircleIcon('#E8943A', 16);  // accent orange
+const listingIcon = makeCircleIcon('#E8943A', 16);  // accent orange
 
 const containerStyle = { width: '100%', height: '400px' };
 

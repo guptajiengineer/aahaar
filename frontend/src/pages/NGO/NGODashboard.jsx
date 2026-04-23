@@ -121,40 +121,40 @@ function NearbyListings() {
             <MapComponent center={coords} markers={listings} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          {listings.map((l) => (
-            <div key={l._id} className="card">
-              <div className="flex justify-between items-start gap-4">
-                <div style={{ flex: 1 }}>
-                  <div className="flex items-center gap-3" style={{ marginBottom: 'var(--space-2)' }}>
-                    <p className="font-semi text-lg">{l.foodName}</p>
-                    <StatusBadge status={l.foodType} />
+            {listings.map((l) => (
+              <div key={l._id} className="card">
+                <div className="flex justify-between items-start gap-4">
+                  <div style={{ flex: 1 }}>
+                    <div className="flex items-center gap-3" style={{ marginBottom: 'var(--space-2)' }}>
+                      <p className="font-semi text-lg">{l.foodName}</p>
+                      <StatusBadge status={l.foodType} />
+                    </div>
+                    <p className="text-sm text-muted">{l.quantity} {l.unit}</p>
+                    <p className="text-sm text-muted">📍 {l.address}</p>
+                    <p className="text-sm text-muted">
+                      🕐 Pickup until {new Date(l.pickupWindowEnd).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </p>
+                    <p className="text-sm" style={{ marginTop: 'var(--space-2)' }}>
+                      By <strong>{l.donorId?.name}</strong>
+                    </p>
+                    {l.description && <p className="text-sm text-muted" style={{ marginTop: 4 }}>{l.description}</p>}
                   </div>
-                  <p className="text-sm text-muted">{l.quantity} {l.unit}</p>
-                  <p className="text-sm text-muted">📍 {l.address}</p>
-                  <p className="text-sm text-muted">
-                    🕐 Pickup until {new Date(l.pickupWindowEnd).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
-                  </p>
-                  <p className="text-sm" style={{ marginTop: 'var(--space-2)' }}>
-                    By <strong>{l.donorId?.name}</strong>
-                  </p>
-                  {l.description && <p className="text-sm text-muted" style={{ marginTop: 4 }}>{l.description}</p>}
+                  {l.photo && (
+                    <img src={l.photo} alt={l.foodName} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 'var(--radius-md)', flexShrink: 0 }} />
+                  )}
                 </div>
-                {l.photo && (
-                  <img src={l.photo} alt={l.foodName} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 'var(--radius-md)', flexShrink: 0 }} />
-                )}
+                <div style={{ marginTop: 'var(--space-4)', borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)' }}>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    disabled={claiming === l._id}
+                    onClick={() => handleClaim(l._id, l.foodName)}
+                  >
+                    {claiming === l._id ? <span className="spinner" style={{ width: 16, height: 16 }} /> : 'Claim this donation'}
+                  </button>
+                </div>
               </div>
-              <div style={{ marginTop: 'var(--space-4)', borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)' }}>
-                <button
-                  className="btn btn-primary btn-sm"
-                  disabled={claiming === l._id}
-                  onClick={() => handleClaim(l._id, l.foodName)}
-                >
-                  {claiming === l._id ? <span className="spinner" style={{ width: 16, height: 16 }} /> : 'Claim this donation'}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
         </>
       )}
     </div>

@@ -244,7 +244,7 @@ function UserManagement() {
                 <td>
                   {u.isSuspended ? <span className="badge badge-rejected">Suspended</span>
                     : u.isApproved ? <span className="badge badge-approved">Active</span>
-                    : <span className="badge badge-pending">Pending</span>}
+                      : <span className="badge badge-pending">Pending</span>}
                 </td>
                 <td>
                   <button
@@ -379,7 +379,7 @@ function ListingsManagement() {
   const [tab, setTab] = useState('pending'); // pending, active
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Assignment Modal State
   const [assignModal, setAssignModal] = useState(null); // { type: 'ngo' | 'volunteer', listing: obj }
   const [users, setUsers] = useState([]); // ngos or volunteers
