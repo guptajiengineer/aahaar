@@ -1,9 +1,18 @@
+// ─── TESTING FLAG (mirrors authMiddleware) ────────────────────────────────────
+// Flip this to false alongside authMiddleware.js when restoring auth for production.
+const BYPASS_AUTH = true;
+// ──────────────────────────────────────────────────────────────────────────────
+
 /**
  * Role-based access control middleware.
  * Usage: authorise('admin', 'ngo')
  */
 const authorise = (...roles) => {
   return (req, res, next) => {
+    // ── BYPASS: skip role & approval checks for testing ──
+    if (BYPASS_AUTH) return next();
+    // ──────────────────────────────────────────────────────
+
     if (!req.user) {
       res.status(401);
       throw new Error('Not authenticated');

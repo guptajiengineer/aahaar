@@ -2,7 +2,32 @@ const jwt = require('jsonwebtoken');
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
 
+// ─── TESTING FLAG ─────────────────────────────────────────────────────────────
+// Set BYPASS_AUTH=true to skip all token verification and allow every request.
+// Revert by removing this flag (or setting it to false) before going to production.
+const BYPASS_AUTH = true;
+
+const MOCK_USER = {
+  _id: '000000000000000000000000',
+  name: 'Test Admin',
+  email: 'admin@aahaar.com',
+  role: 'admin',
+  isVerified: true,
+  isApproved: true,
+  isSuspended: false,
+  city: 'Global',
+  profilePhoto: null,
+};
+// ──────────────────────────────────────────────────────────────────────────────
+
 const protect = asyncHandler(async (req, res, next) => {
+  // ── BYPASS: skip all auth checks for testing ──
+  if (BYPASS_AUTH) {
+    req.user = MOCK_USER;
+    return next();
+  }
+  // ─────────────────────────────────────────────
+
   let token;
 
   if (

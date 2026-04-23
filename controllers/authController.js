@@ -1,3 +1,8 @@
+// ─── TESTING FLAG ─────────────────────────────────────────────────────────────
+// Set to false before going to production.
+const BYPASS_AUTH = true;
+// ──────────────────────────────────────────────────────────────────────────────
+
 const asyncHandler = require('express-async-handler');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -121,10 +126,17 @@ const login = asyncHandler(async (req, res) => {
 
   const user = await User.findOne({ email }).select('+password');
 
-  if (!user || !(await user.matchPassword(password))) {
+  if (!user) {
     res.status(401);
     throw new Error('Incorrect email or password');
   }
+
+  // ── BYPASS: skip password check for testing ──
+  if (!BYPASS_AUTH && !(await user.matchPassword(password))) {
+    res.status(401);
+    throw new Error('Incorrect email or password');
+  }
+  // ─────────────────────────────────────────────
 
   if (user.isSuspended) {
     res.status(403);
