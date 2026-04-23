@@ -64,6 +64,10 @@ const listingSchema = new mongoose.Schema(
       enum: ['active', 'claimed', 'collected', 'delivered', 'closed'],
       default: 'active',
     },
+    isApproved: {
+      type: Boolean,
+      default: false,
+    },
     claimedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

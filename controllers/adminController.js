@@ -252,6 +252,140 @@ const getLiveActivity = asyncHandler(async (req, res) => {
   res.json({ success: true, activeListings, activeTasks });
 });
 
+// @desc    Get pending food listings
+// @route   GET /api/admin/listings/pending
+// @access  Private (admin)
+const getPendingListings = asyncHandler(async (req, res) => {
+  const listings = await Listing.find({ isApproved: false, status: 'active' })
+    .sort({ createdAt: 1 })
+    .populate('donorId', 'name email phone city address');
+  res.json({ success: true, listings });
+});
+
+// @desc    Approve or reject a listing
+// @route   PUT /api/admin/listings/:id/approve
+// @access  Private (admin)
+const approveListing = asyncHandler(async (req, res) => {
+  const { approved } = req.body;
+  const listing = await Listing.findById(req.params.id);
+
+  if (!listing) {
+    res.status(404);
+    throw new Error('Listing not found');
+  }
+
+  if (approved) {
+    listing.isApproved = true;
+    await listing.save();
+    await createNotification(
+      listing.donorId,
+      `Your food listing "${listing.foodName}" has been approved and is now live.`,
+      'listing_approved',
+      listing._id,
+      'Listing'
+    );
+  } else {
+    listing.status = 'closed'; // Rejecting closes the listing
+    await listing.save();
+    await createNotification(
+      listing.donorId,
+      `Your food listing "${listing.foodName}" was not approved by the admin.`,
+      'listing_rejected',
+      listing._id,
+      'Listing'
+    );
+  }
+
+  res.json({ success: true, message: `Listing ${approved ? 'approved' : 'rejected'}`, listing });
+});
+
+// @desc    Assign listing to an NGO
+// @route   PUT /api/admin/listings/:id/assign-ngo
+// @access  Private (admin)
+const assignListingToNGO = asyncHandler(async (req, res) => {
+  const { ngoId } = req.body;
+  const listing = await Listing.findById(req.params.id).populate('donorId', 'name');
+
+  if (!listing) {
+    res.status(404);
+    throw new Error('Listing not found');
+  }
+
+  const ngo = await User.findById(ngoId);
+  if (!ngo || ngo.role !== 'ngo') {
+    res.status(400);
+    throw new Error('Invalid NGO');
+  }
+
+  listing.status = 'claimed';
+  listing.claimedBy = ngoId;
+  listing.claimedAt = Date.now();
+  await listing.save();
+
+  await createNotification(
+    ngoId,
+    `Admin has assigned a new food listing to you: "${listing.foodName}". Please arrange for pickup.`,
+    'listing_assigned',
+    listing._id,
+    'Listing'
+  );
+
+  await createNotification(
+    listing.donorId._id,
+    `Your donation "${listing.foodName}" has been assigned to ${ngo.name} by the admin.`,
+    'listing_claimed',
+    listing._id,
+    'Listing'
+  );
+
+  res.json({ success: true, message: 'Listing assigned to NGO', listing });
+});
+
+// @desc    Assign listing to a Volunteer
+// @route   PUT /api/admin/listings/:id/assign-volunteer
+// @access  Private (admin)
+const assignListingToVolunteer = asyncHandler(async (req, res) => {
+  const { volunteerId } = req.body;
+  const listing = await Listing.findById(req.params.id);
+
+  if (!listing) {
+    res.status(404);
+    throw new Error('Listing not found');
+  }
+
+  if (listing.status !== 'claimed') {
+    res.status(400);
+    throw new Error('Listing must be assigned to an NGO first before assigning a volunteer');
+  }
+
+  const volunteer = await User.findById(volunteerId);
+  if (!volunteer || volunteer.role !== 'volunteer') {
+    res.status(400);
+    throw new Error('Invalid Volunteer');
+  }
+
+  listing.assignedVolunteer = volunteerId;
+  await listing.save();
+
+  // Create task for volunteer
+  const task = await Task.create({
+    listingId: listing._id,
+    volunteerId,
+    ngoId: listing.claimedBy,
+    status: 'assigned',
+  });
+
+  await createNotification(
+    volunteerId,
+    `Admin has assigned a new pickup task for "${listing.foodName}".`,
+    'listing_assigned',
+    listing._id,
+    'Listing'
+  );
+
+  res.json({ success: true, message: 'Listing assigned to Volunteer', listing, task });
+});
+
 module.exports = {
   getVerificationQueue,
   approveUser,
@@ -260,4 +394,8 @@ module.exports = {
   getPlatformStats,
   sendAnnouncement,
   getLiveActivity,
+  getPendingListings,
+  approveListing,
+  assignListingToNGO,
+  assignListingToVolunteer,
 };

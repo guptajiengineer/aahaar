@@ -9,7 +9,8 @@ import * as adminService from '../../services/adminService';
 function Sidebar() {
   const items = [
     { to: '/admin', label: 'Stats', icon: '📊', end: true },
-    { to: '/admin/queue', label: 'Approvals', icon: '⏳' },
+    { to: '/admin/queue', label: 'User Approvals', icon: '⏳' },
+    { to: '/admin/listings', label: 'Food Listings', icon: '🍲' },
     { to: '/admin/users', label: 'Users', icon: '👥' },
     { to: '/admin/activity', label: 'Activity', icon: '⚡' },
     { to: '/admin/announce', label: 'Announce', icon: '📢' },
@@ -374,6 +375,164 @@ function Announcements() {
   );
 }
 
+function ListingsManagement() {
+  const [tab, setTab] = useState('pending'); // pending, active
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Assignment Modal State
+  const [assignModal, setAssignModal] = useState(null); // { type: 'ngo' | 'volunteer', listing: obj }
+  const [users, setUsers] = useState([]); // ngos or volunteers
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [processing, setProcessing] = useState(false);
+
+  const loadListings = () => {
+    setLoading(true);
+    if (tab === 'pending') {
+      adminService.getPendingListings().then(({ data }) => setListings(data.listings)).finally(() => setLoading(false));
+    } else {
+      adminService.getLiveActivity().then(({ data }) => setListings(data.activeListings)).finally(() => setLoading(false));
+    }
+  };
+
+  useEffect(() => { loadListings(); }, [tab]);
+
+  const handleApprove = async (id, approved) => {
+    try {
+      await adminService.approveListing(id, approved);
+      showToast(`Listing ${approved ? 'approved' : 'rejected'}`, 'success');
+      loadListings();
+    } catch {
+      showToast('Action failed', 'error');
+    }
+  };
+
+  const openAssignModal = async (listing, type) => {
+    setAssignModal({ type, listing });
+    setSelectedUserId('');
+    setProcessing(true);
+    try {
+      const { data } = await adminService.getAllUsers({ role: type, limit: 100 });
+      setUsers(data.users.filter(u => u.isApproved && !u.isSuspended));
+    } catch {
+      showToast(`Failed to load ${type}s`, 'error');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleAssign = async () => {
+    if (!selectedUserId) return;
+    setProcessing(true);
+    try {
+      if (assignModal.type === 'ngo') {
+        await adminService.assignListingToNGO(assignModal.listing._id, selectedUserId);
+      } else {
+        await adminService.assignListingToVolunteer(assignModal.listing._id, selectedUserId);
+      }
+      showToast('Assignment successful', 'success');
+      setAssignModal(null);
+      loadListings();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Assignment failed', 'error');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="page-header">
+        <h1 className="page-title">Food Listings</h1>
+        <div className="tabs" style={{ marginTop: 'var(--space-4)' }}>
+          <button className={`tab ${tab === 'pending' ? 'active' : ''}`} onClick={() => setTab('pending')}>
+            Pending Approvals
+          </button>
+          <button className={`tab ${tab === 'active' ? 'active' : ''}`} onClick={() => setTab('active')}>
+            Active & Claimed
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center" style={{ padding: 'var(--space-12)' }}><div className="spinner spinner-lg" /></div>
+      ) : listings.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">🍲</div>
+          <p className="empty-state-title">No listings found.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          {listings.map(l => (
+            <div key={l._id} className="card">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-semi text-lg">{l.foodName}</h3>
+                  <p className="text-sm text-muted" style={{ marginBottom: 'var(--space-2)' }}>
+                    {l.quantity} {l.unit} · {l.foodType}
+                  </p>
+                  <p className="text-sm">Donor: {l.donorId?.name} ({l.donorId?.phone})</p>
+                  <p className="text-sm text-muted">{l.address}</p>
+                </div>
+                {tab === 'active' && <StatusBadge status={l.status} />}
+              </div>
+
+              {tab === 'pending' && (
+                <div className="flex gap-3" style={{ marginTop: 'var(--space-4)' }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => handleApprove(l._id, true)}>✓ Approve</button>
+                  <button className="btn btn-danger btn-sm" onClick={() => handleApprove(l._id, false)}>✕ Reject</button>
+                </div>
+              )}
+
+              {tab === 'active' && (
+                <div className="flex gap-3" style={{ marginTop: 'var(--space-4)' }}>
+                  {l.status === 'active' && (
+                    <button className="btn btn-primary btn-sm" onClick={() => openAssignModal(l, 'ngo')}>
+                      Assign to NGO
+                    </button>
+                  )}
+                  {l.status === 'claimed' && !l.assignedVolunteer && (
+                    <button className="btn btn-accent btn-sm" onClick={() => openAssignModal(l, 'volunteer')}>
+                      Assign Volunteer
+                    </button>
+                  )}
+                  {l.assignedVolunteer && <p className="text-sm text-accent">Volunteer assigned</p>}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Modal isOpen={!!assignModal} onClose={() => setAssignModal(null)} title={`Assign ${assignModal?.type === 'ngo' ? 'NGO' : 'Volunteer'}`}>
+        <p className="text-sm text-muted" style={{ marginBottom: 'var(--space-4)' }}>
+          Select a user to assign to "{assignModal?.listing?.foodName}".
+        </p>
+        {processing && !users.length ? (
+          <div className="spinner" />
+        ) : (
+          <>
+            <div className="form-group" style={{ marginBottom: 'var(--space-5)' }}>
+              <select className="form-select" value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)}>
+                <option value="">-- Select {assignModal?.type} --</option>
+                {users.map(u => (
+                  <option key={u._id} value={u._id}>{u.name} ({u.city})</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-3">
+              <button className="btn btn-primary flex-1" onClick={handleAssign} disabled={!selectedUserId || processing}>
+                {processing ? <span className="spinner" style={{ width: 16, height: 16 }} /> : 'Confirm Assignment'}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setAssignModal(null)}>Cancel</button>
+            </div>
+          </>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
 export default function AdminPanel() {
   return (
     <>
@@ -385,6 +544,7 @@ export default function AdminPanel() {
           <Routes>
             <Route index element={<PlatformStats />} />
             <Route path="queue" element={<VerificationQueue />} />
+            <Route path="listings" element={<ListingsManagement />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="activity" element={<LiveActivity />} />
             <Route path="announce" element={<Announcements />} />

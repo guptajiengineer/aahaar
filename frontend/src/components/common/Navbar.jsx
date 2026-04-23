@@ -76,7 +76,10 @@ export default function Navbar({ showNav = true }) {
               <span className="text-muted text-sm" style={{ display: 'none' }}>
                 {/* Mobile: handled by sidebar */}
               </span>
-              <button onClick={handleLogout} className="btn btn-ghost btn-sm">
+              <Link to="/settings" className="btn btn-ghost btn-sm" style={{ marginRight: 'var(--space-2)' }}>
+                Settings
+              </Link>
+              <button onClick={handleLogout} className="btn btn-outline btn-sm">
                 Log out
               </button>
             </>

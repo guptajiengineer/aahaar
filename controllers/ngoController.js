@@ -18,6 +18,7 @@ const getNearbyListings = asyncHandler(async (req, res) => {
 
   const query = {
     status: 'active',
+    isApproved: true,
     location: {
       $nearSphere: {
         $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },

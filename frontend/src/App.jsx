@@ -14,6 +14,7 @@ import NGODashboard from './pages/NGO/NGODashboard';
 import VolunteerDashboard from './pages/Volunteer/VolunteerDashboard';
 import AdminPanel from './pages/Admin/AdminPanel';
 import ChatPage from './pages/Chat/ChatPage';
+import SettingsPage from './pages/Settings/SettingsPage';
 
 function RoleRouter() {
   const { user, loading } = useAuth();
@@ -76,10 +77,14 @@ function RoleRouter() {
         element={user?.role === 'admin' ? <AdminPanel /> : <Navigate to="/login" replace />}
       />
 
-      {/* Shared Chat Route */}
+      {/* Shared Routes */}
       <Route
         path="/messages/:listingId"
         element={user && (user.role === 'donor' || user.role === 'ngo') ? <ChatPage /> : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/settings"
+        element={user ? <SettingsPage /> : <Navigate to="/login" replace />}
       />
 
       {/* Catch-all */}
