@@ -31,6 +31,10 @@ connectDB();
 const app = express();
 const httpServer = http.createServer(app);
 
+// Trust proxy - CRITICAL for Render/Heroku/production deployments
+// This allows express-rate-limit to correctly identify client IPs
+app.set('trust proxy', 1);
+
 // Initialise Socket.io
 initSocket(httpServer);
 
