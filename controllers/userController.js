@@ -1,5 +1,24 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
+
+// ─── TESTING FLAG ─────────────────────────────────────────────────────────────
+// Must match BYPASS_AUTH in authMiddleware.js and authController.js
+const BYPASS_AUTH = true;
+
+const MOCK_USER = {
+  _id: '000000000000000000000000',
+  name: 'Test Admin',
+  email: 'admin@aahaar.com',
+  role: 'admin',
+  isVerified: true,
+  isApproved: true,
+  isSuspended: false,
+  city: 'Global',
+  profilePhoto: null,
+  phone: null,
+  address: null,
+};
+// ──────────────────────────────────────────────────────────────────────────────
 const DonorProfile = require('../models/DonorProfile');
 const NGOProfile = require('../models/NGOProfile');
 const VolunteerProfile = require('../models/VolunteerProfile');
@@ -8,6 +27,12 @@ const VolunteerProfile = require('../models/VolunteerProfile');
 // @route   GET /api/users/me
 // @access  Private
 const getMe = asyncHandler(async (req, res) => {
+  // ── BYPASS: return mock user directly to avoid DB lookup with fake ObjectId ──
+  if (BYPASS_AUTH) {
+    return res.json({ success: true, user: MOCK_USER, profile: null });
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+
   const user = await User.findById(req.user._id);
 
   let profile = null;

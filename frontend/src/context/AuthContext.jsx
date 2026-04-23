@@ -1,39 +1,36 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { login as loginApi, logout as logoutApi } from '../services/authService';
-import { getMe } from '../services/userService';
+import { createContext, useContext, useState, useCallback } from 'react';
+// ─── DEMO MODE ────────────────────────────────────────────────────────────────
+// Real auth (loginApi, logoutApi, getMe) is bypassed entirely.
+// Login just sets a fake user object in memory — no backend needed.
+// To restore: uncomment the real imports below and swap the login/logout/useEffect back.
+// import { login as loginApi, logout as logoutApi } from '../services/authService';
+// import { getMe } from '../services/userService';
+// ─────────────────────────────────────────────────────────────────────────────
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading] = useState(false); // no async init needed in demo mode
 
-  // Rehydrate session on mount
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      getMe()
-        .then(({ data }) => setUser(data.user))
-        .catch(() => {
-          localStorage.removeItem('accessToken');
-          setUser(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+  // ── DEMO login: just build a fake user from name + role, no API call ──
+  const login = useCallback(async (name, role) => {
+    const fakeUser = {
+      _id: 'demo-user-001',
+      name: name || 'Demo User',
+      email: `${(name || 'demo').toLowerCase().replace(/\s+/g, '.')}@demo.com`,
+      role: role || 'donor',
+      isVerified: true,
+      isApproved: true,
+      isSuspended: false,
+      city: 'Demo City',
+      profilePhoto: null,
+    };
+    setUser(fakeUser);
+    return fakeUser;
   }, []);
 
-  const login = useCallback(async (email, password) => {
-    const { data } = await loginApi(email, password);
-    localStorage.setItem('accessToken', data.accessToken);
-    setUser(data.user);
-    return data.user;
-  }, []);
-
-  const logout = useCallback(async () => {
-    try { await logoutApi(); } catch (_) {}
-    localStorage.removeItem('accessToken');
+  const logout = useCallback(() => {
     setUser(null);
   }, []);
 
